@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Тема для вашего приложения без ActionBar -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Убираем встроенный ActionBar -->
+        <item name="windowActionBar">false</item>
+        <!-- Убираем заголовок окна -->
+        <item name="windowNoTitle">true</item>
+        <!-- Прозрачный статус-бар -->
+        <item name="colorPrimary">#065DF3</item>
+        <item name="colorPrimaryVariant">#186CEC</item>
+        <item name="colorOnPrimary">#131111</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+</resources>

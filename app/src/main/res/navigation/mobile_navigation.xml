@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mobile_navigation"
+    app:startDestination="@id/navigation_home">
+
+    <fragment
+        android:id="@+id/navigation_home"
+        android:name="com.example.mycar.ui.home.HomeFragment"
+        android:label="Главная"
+        tools:layout="@layout/fragment_home" />
+
+    <fragment
+        android:id="@+id/navigation_indicators"
+        android:name="com.example.mycar.ui.indicators.IndicatorsFragment"
+        android:label="Indicators"
+        tools:layout="@layout/fragment_sixth" />
+
+    <fragment
+        android:id="@+id/navigation_dashboard"
+        android:name="com.example.mycar.ui.map.MapFragment"
+        android:label="Избранное"
+        tools:layout="@layout/fragment_dashboard" />
+
+    <fragment
+        android:id="@+id/navigation_crash"
+        android:name="com.example.mycar.ui.crash.CrashFragment"
+        android:label="ДТП" />
+
+    <fragment
+        android:id="@+id/navigation_notifications"
+        android:name="com.example.mycar.ui.profile.ProfileFragment"
+        android:label="Профиль"
+        tools:layout="@layout/fragment_notifications" />
+    <action
+        android:id="@+id/action_profileFragment_to_editProfileFragment"
+        app:destination="@id/editProfileFragment" />
+    <fragment
+        android:id="@+id/editProfileFragment"
+        android:name="com.example.mycar.ui.profile.EditProfileFragment"
+        android:label="Редактирование профиля"
+        tools:layout="@layout/fragment_edit_profile" />
+
+</navigation>

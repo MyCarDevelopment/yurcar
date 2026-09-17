@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/navigation_home"
+        android:icon="@drawable/ic_home_black_24dp"
+        android:title="Главная" />
+    <item
+        android:id="@+id/navigation_crash"
+        android:icon="@drawable/ic_baseline_car_crash_24"
+        android:title="SOS" />
+    <item
+        android:id="@+id/navigation_dashboard"
+        android:icon="@android:drawable/ic_dialog_map"
+        android:title="Карта услуг" />
+
+    <item
+        android:id="@+id/navigation_notifications"
+        android:icon="@drawable/ic_baseline_manage_accounts_24"
+        android:title="Профиль" />
+
+
+
+</menu>
