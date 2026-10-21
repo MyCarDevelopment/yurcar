@@ -5,133 +5,145 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
-import android.util.Log
 import android.view.View
-import android.widget.Toast
+import android.widget.FrameLayout
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.withStarted
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.example.mycar.databinding.ActivityMainBinding
-import com.example.mycar.ui.login.YandexWebAuthActivity
-import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.example.mycar.ui.entry.*
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.io.IOException
 
 class MainActivity : BaseActivity() {
-
     private lateinit var binding: ActivityMainBinding
-    private lateinit var firebaseAnalytics: FirebaseAnalytics
     private lateinit var navController: NavController
-    private val AUTH_REQUEST_CODE = 1001
+    private lateinit var gateView: ComposeView
+    private var pendingStage: String? = null
+    private var gateJob: Job? = null
+    private var gateError by mutableStateOf<String?>(null)
+
+    private val authentication = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        pendingStage = null
+        if (result.resultCode == Activity.RESULT_OK) advanceEntry() else finish()
+    }
+    private val agreements = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        pendingStage = null
+        if (result.resultCode == Activity.RESULT_OK) advanceEntry() else finish()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        // Firebase
-        firebaseAnalytics = FirebaseAnalytics.getInstance(this)
-        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true)
-
-        // NavHost
-        val navHostFragment = supportFragmentManager
-            .findFragmentById(R.id.nav_host_fragment_activity_main) as NavHostFragment
-        navController = navHostFragment.navController
-
         supportActionBar?.hide()
-
-        // 🔥 ПРОВЕРКА АВТОРИЗАЦИИ
-        binding.navView.visibility = View.VISIBLE  // Покажем UI сразу
-
-        // Проверяем авторизацию ПОСЛЕ полной инициализации
-        lifecycleScope.launch {
-            delay(100)  // Дать время onActivityResult
-            checkAuthStatus()
+        pendingStage = savedInstanceState?.getString("entry_pending")
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        binding.root.visibility = View.INVISIBLE
+        gateView = ComposeView(this).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent { EntryTheme {
+                Column(Modifier.fillMaxSize().background(EntryBg).padding(24.dp),
+                    verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (gateError == null) {
+                        CircularProgressIndicator(color = EntryAccent)
+                        Text("Подготавливаем Юркар…", color = EntryMuted, modifier = Modifier.padding(top = 18.dp))
+                    } else {
+                        Text(gateError.orEmpty(), color = EntryMuted)
+                        Button(onClick = ::advanceEntry, modifier = Modifier.padding(top = 16.dp)) { Text("Повторить") }
+                        TextButton(onClick = { finish() }) { Text("Закрыть") }
+                    }
+                }
+            } }
         }
-        // Navigation setup
-        val navView: BottomNavigationView = binding.navView
-        navView.setupWithNavController(navController)
-
-        val appBarConfiguration = AppBarConfiguration(
-            setOf(
-                R.id.navigation_home,
-                R.id.navigation_dashboard,
-                R.id.navigation_notifications,
-                R.id.navigation_crash
-            )
-        )
-        setupActionBarWithNavController(navController, appBarConfiguration)
-
+        setContentView(FrameLayout(this).apply {
+            addView(binding.root, FrameLayout.LayoutParams(-1, -1))
+            addView(gateView, FrameLayout.LayoutParams(-1, -1))
+        })
+        val navHost = supportFragmentManager.findFragmentById(R.id.nav_host_fragment_activity_main) as NavHostFragment
+        navController = navHost.navController
+        binding.navView.setupWithNavController(navController)
         navController.addOnDestinationChangedListener { _, destination, _ ->
-            when (destination.id) {
-                R.id.navigation_indicators -> binding.navView.visibility = android.view.View.GONE
-                else -> binding.navView.visibility = android.view.View.VISIBLE
+            binding.navView.visibility = if (destination.id == R.id.navigation_indicators) View.GONE else View.VISIBLE
+        }
+        if (pendingStage == null) advanceEntry()
+    }
+
+    private fun advanceEntry() {
+        if (pendingStage != null) return
+        gateJob?.cancel()
+        gateError = null
+        binding.root.visibility = View.INVISIBLE
+        gateView.visibility = View.VISIBLE
+        gateJob = lifecycleScope.launch {
+            val session = SessionRepository(this@MainActivity).current()
+            if (session == null) {
+                lifecycle.withStarted {
+                    pendingStage = "auth"
+                    authentication.launch(Intent(this@MainActivity, AuthWelcomeActivity::class.java))
+                }
+                return@launch
+            }
+            val current = try { ConsentRepository(this@MainActivity).isCurrent(session) }
+            catch (_: IOException) { gateError = "Не удалось проверить документы. Попробуйте ещё раз."; return@launch }
+            if (!current) {
+                lifecycle.withStarted {
+                    pendingStage = "consents"
+                    agreements.launch(Intent(this@MainActivity, AgreementActivity::class.java))
+                }
+                return@launch
+            }
+            lifecycle.withStarted {
+                if (SessionRepository(this@MainActivity).current()?.subjectKey != session.subjectKey) {
+                    advanceEntry()
+                } else {
+                    FirebaseAnalytics.getInstance(this@MainActivity)
+                    FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true)
+                    binding.root.visibility = View.VISIBLE
+                    gateView.visibility = View.GONE
+                }
             }
         }
     }
 
-    private fun checkAuthStatus() {
-        val prefs = getSharedPreferences("mycar_auth", MODE_PRIVATE)
-        val isLoggedIn = prefs.getBoolean("is_logged_in", false)
-        val token = prefs.getString("yandex_token", "") ?: ""
-
-        Log.d("MainActivity", "🔥 CHECK: isLoggedIn=$isLoggedIn, token=${token.take(10)}...")
-
-        if (!isLoggedIn || token.isEmpty()) {
-            Log.d("MainActivity", "→ Запуск авторизации")
-            binding.navView.visibility = View.GONE
-            startActivityForResult(Intent(this, YandexWebAuthActivity::class.java), AUTH_REQUEST_CODE)
-        } else {
-            Log.d("MainActivity", "✅ Уже авторизован")
-            binding.navView.visibility = View.VISIBLE
-        }
+    override fun onStart() {
+        super.onStart()
+        if (::binding.isInitialized && binding.root.visibility == View.VISIBLE && SessionRepository(this).current() == null) advanceEntry()
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        Log.d("MainActivity", "🔥 RESULT: code=$requestCode, result=$resultCode")
-
-        if (requestCode == AUTH_REQUEST_CODE) {
-            when (resultCode) {
-                Activity.RESULT_OK -> {
-                    Log.d("MainActivity", "✅ SUCCESS из WebAuth")
-                    binding.navView.visibility = View.VISIBLE
-                    checkAuthStatus()  // 🔥 ПЕРЕПРОВЕРИМ SharedPreferences!
-                    Toast.makeText(this, "✅ Добро пожаловать в Юркар!", Toast.LENGTH_LONG).show()
-                }
-                Activity.RESULT_CANCELED -> {
-                    finish()
-                }
-            }
-        }
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString("entry_pending", pendingStage)
+        super.onSaveInstanceState(outState)
     }
 
-    override fun onSupportNavigateUp(): Boolean {
-        return navController.navigateUp() || super.onSupportNavigateUp()
-    }
+    override fun onSupportNavigateUp(): Boolean = navController.navigateUp() || super.onSupportNavigateUp()
 }
+
 abstract class BaseActivity : AppCompatActivity() {
     override fun attachBaseContext(newBase: Context?) {
-        val newConfig = Configuration(newBase?.resources?.configuration)
-        newConfig.fontScale = 0.9f
-        applyOverrideConfiguration(newConfig)
+        val config = Configuration(newBase?.resources?.configuration)
+        config.fontScale = 0.9f
+        applyOverrideConfiguration(config)
         super.attachBaseContext(newBase)
     }
-
-    // Удобный метод для Compose фрагментов
-    fun createComposeView(content: @Composable () -> Unit): ComposeView {
-        return ComposeView(this).apply {
-            setContent { content() }
-        }
+    fun createComposeView(content: @Composable () -> Unit): ComposeView = ComposeView(this).apply {
+        setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        setContent { content() }
     }
 }

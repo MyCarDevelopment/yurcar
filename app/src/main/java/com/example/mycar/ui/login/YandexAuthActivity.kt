@@ -1,188 +1,134 @@
 package com.example.mycar.ui.login
 
 import android.app.Activity
-import android.content.Intent
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.view.View
-import android.webkit.CookieManager
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceError
-import android.webkit.WebResourceRequest
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.webkit.*
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
+import androidx.activity.addCallback
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.mycar.R
+import com.example.mycar.ui.entry.SessionRepository
+import com.example.mycar.ui.entry.configureEntryWindow
+import kotlinx.coroutines.launch
 
 class YandexWebAuthActivity : AppCompatActivity() {
-
+    private val model: YandexAuthViewModel by viewModels()
     private lateinit var webView: WebView
-    private lateinit var progressBar: ProgressBar
-    private lateinit var btnClose: Button
-    private lateinit var titleText: TextView
-    private val TAG = "YandexAuth"
-    private var authComplete = false
-    private val CLIENT_ID = "2aeed5b4dc494b3bb04ccdfb81945097"
+    private lateinit var progress: ProgressBar
+    private lateinit var title: TextView
+    private lateinit var retry: Button
+    private lateinit var close: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (SessionRepository(this).current() != null) { setResult(Activity.RESULT_OK); finish(); return }
+        supportActionBar?.hide()
+        configureEntryWindow(this)
         setContentView(R.layout.activity_yandex_web_auth)
-
-        Log.d(TAG, "🔥 Yandex OAuth started")
-        initViews()
-        setupWebView()
-        loadYandexAuth()
-    }
-
-    private fun initViews() {
+        val root = findViewById<View>(R.id.auth_root)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val padding = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime())
+            view.setPadding(padding.left, padding.top, padding.right, padding.bottom)
+            insets
+        }
         webView = findViewById(R.id.webView)
-        progressBar = findViewById(R.id.progressBar)
-        btnClose = findViewById(R.id.btnClose)
-        titleText = findViewById(R.id.titleText)
-
-        btnClose.setOnClickListener { finishWithCancel() }
-    }
-
-    private fun setupWebView() {
-        val settings = webView.settings.apply {
+        progress = findViewById(R.id.progressBar)
+        title = findViewById(R.id.titleText)
+        close = findViewById(R.id.btnClose)
+        retry = findViewById(R.id.btnRetry)
+        close.setOnClickListener { finish() }
+        retry.setOnClickListener { model.resetError(); loadAuthorization() }
+        webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
-            loadWithOverviewMode = true
-            useWideViewPort = true
-            userAgentString = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Mobile Safari/537.36"
-            cacheMode = WebSettings.LOAD_NO_CACHE
+            allowFileAccess = false
+            allowContentAccess = false
+            mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
         }
-
-        webView.webChromeClient = WebChromeClient()
-
+        CookieManager.getInstance().setAcceptCookie(true)
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                progress.progress = newProgress
+                progress.visibility = if (newProgress < 100) View.VISIBLE else View.GONE
+            }
+        }
         webView.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                super.onPageStarted(view, url, favicon)
-                Log.d(TAG, "Loading: $url")
-                titleText.text = "Юркар • Авторизация"
-                progressBar.visibility = View.VISIBLE
+                title.text = "Яндекс ID"
+                retry.visibility = View.GONE
             }
-
-            override fun onPageFinished(view: WebView?, url: String?) {
-                super.onPageFinished(view, url)
-                Log.d(TAG, "Finished: $url | Title: ${webView.title}")
-                progressBar.visibility = View.GONE
-                titleText.text = "Юркар"
-                url?.let { checkAuthResult(it) }
-            }
-
-            override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
-                super.onReceivedError(view, request, error)
-                Log.e(TAG, "ERROR: ${error?.description}")
-                progressBar.visibility = View.GONE
-                titleText.text = "Ошибка сети"
-            }
-
+            override fun onPageFinished(view: WebView?, url: String?) { url?.let(::handleRedirect) }
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                request?.url?.toString()?.let { url ->
-                    Log.d(TAG, "Redirect: $url")
-                    if (checkAuthResult(url)) return true
+                val url = request?.url ?: return false
+                if (handleRedirect(url.toString())) return true
+                if (url.scheme != "https") { showError("Не удалось открыть этот способ входа"); return true }
+                return false
+            }
+            override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
+                if (request?.isForMainFrame == true) showError("Проверьте подключение к интернету")
+            }
+        }
+        onBackPressedDispatcher.addCallback(this) {
+            if (model.status.value == AuthSaveState.SAVING) return@addCallback
+            if (webView.canGoBack()) webView.goBack() else finish()
+        }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                model.status.collect { status ->
+                    close.isEnabled = status != AuthSaveState.SAVING
+                    when (status) {
+                        AuthSaveState.SAVED -> { setResult(Activity.RESULT_OK); finish() }
+                        AuthSaveState.ERROR -> showError("Не удалось сохранить вход. Попробуйте снова")
+                        AuthSaveState.SAVING -> { title.text = "Завершаем вход…"; retry.visibility = View.GONE }
+                        else -> Unit
+                    }
                 }
-                return super.shouldOverrideUrlLoading(view, request)
             }
         }
-        webView.clearCache(true)
-        webView.clearHistory()
-        webView.clearFormData()
-        CookieManager.getInstance().removeAllCookies(null)
-        CookieManager.getInstance().setAcceptCookie(true)
+        if (savedInstanceState == null || webView.restoreState(savedInstanceState) == null) loadAuthorization()
     }
 
-    private fun loadYandexAuth() {
-        val redirectUri = "https://oauth.yandex.ru/verification_code"
-        val scopes = "login:email login:info"
-
-        val authUrl = "https://oauth.yandex.ru/authorize?" +
-                "client_id=$CLIENT_ID&" +
-                "response_type=token&" +
-                "redirect_uri=${android.net.Uri.encode(redirectUri)}&" +
-                "scope=$scopes&" +
-                "display=page"
-
-        Log.d(TAG, "OAuth URL: $authUrl")
-        webView.loadUrl(authUrl)
+    private fun loadAuthorization() {
+        retry.visibility = View.GONE
+        val url = Uri.parse("https://oauth.yandex.ru/authorize").buildUpon()
+            .appendQueryParameter("client_id", "2aeed5b4dc494b3bb04ccdfb81945097")
+            .appendQueryParameter("response_type", "token")
+            .appendQueryParameter("redirect_uri", "https://oauth.yandex.ru/verification_code")
+            .appendQueryParameter("scope", "login:email login:info")
+            .appendQueryParameter("state", model.nonce).appendQueryParameter("display", "page").build()
+        webView.loadUrl(url.toString())
     }
 
-    private fun checkAuthResult(url: String): Boolean {
-        if (authComplete) return true
-
-        Log.d(TAG, "Check result: $url")
-
-        if (url.contains("access_token=")) {
-            val token = url.substringAfter("access_token=").substringBefore("&").substringBefore("#")
-            if (token.isNotEmpty()) {
-                authComplete = true
-                saveToken(token)
-                successAuth(token)
-                return true
-            }
-        } else if (url.contains("error=")) {
-            val error = url.substringAfter("error=").substringBefore("&")
-            authComplete = true
-            cancelAuth("Ошибка: $error")
-            return true
-        }
-        return false
+    private fun handleRedirect(url: String): Boolean = when (val result = parseYandexRedirect(url, model.nonce)) {
+        null -> false
+        YandexRedirect.Rejected -> { showError("Вход не подтверждён. Попробуйте ещё раз"); true }
+        is YandexRedirect.Success -> { model.complete(result); true }
     }
 
-    private fun successAuth(token: String) {
-        Log.d(TAG, "✅ SUCCESS: ${token.take(20)}...")
-        runOnUiThread {
-            Toast.makeText(this, "✅ Авторизация Юркар успешна!", Toast.LENGTH_LONG).show()
-            val resultIntent = Intent().apply {
-                putExtra("yandex_token", token)
-                putExtra("auth_status", "success")
-            }
-            setResult(Activity.RESULT_OK, resultIntent)
-            finish()
-        }
+    private fun showError(message: String) {
+        title.text = message
+        progress.visibility = View.GONE
+        retry.visibility = View.VISIBLE
     }
 
-    private fun finishWithCancel() {
-        val resultIntent = Intent().apply {
-            putExtra("auth_status", "cancel")
-        }
-        setResult(Activity.RESULT_CANCELED, resultIntent)
-        finish()
-    }
-
-    private fun cancelAuth(reason: String) {
-        Log.e(TAG, "❌ $reason")
-        runOnUiThread {
-            Toast.makeText(this, reason, Toast.LENGTH_LONG).show()
-            finishWithCancel()
-        }
-    }
-
-    private fun saveToken(token: String) {
-        val prefs = getSharedPreferences("mycar_auth", MODE_PRIVATE)
-        prefs.edit()
-            .putString("yandex_token", token)
-            .putBoolean("is_logged_in", true)
-            .putLong("auth_time", System.currentTimeMillis())
-            .commit()  // 🔥 commit() вместо apply() для гарантии
-        Log.d(TAG, "✅ SAVED: is_logged_in=true, token=${token.take(10)}...")
-    }
-
-    override fun onBackPressed() {
-        if (webView.canGoBack()) webView.goBack()
-        else super.onBackPressed()
+    override fun onSaveInstanceState(outState: Bundle) {
+        if (::webView.isInitialized) webView.saveState(outState)
+        super.onSaveInstanceState(outState)
     }
 
     override fun onDestroy() {
-        webView.destroy()
+        if (::webView.isInitialized) { webView.stopLoading(); webView.destroy() }
         super.onDestroy()
     }
 }

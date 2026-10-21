@@ -1,60 +1,36 @@
 package com.example.mycar
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.os.Bundle
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.viewpager2.widget.ViewPager2
-import com.example.mycar.R
+import com.example.mycar.ui.entry.OnboardingScreen
+import com.example.mycar.ui.entry.configureEntryWindow
+import com.example.mycar.ui.crash.SosActivity
 
 @SuppressLint("CustomSplashScreen")
 class SplashActivity : AppCompatActivity() {
-
-    private val images = listOf(R.drawable.sfirst, R.drawable.ssecond, R.drawable.sthird)
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val sharedPreferences: SharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
-        val isFirstLaunch = sharedPreferences.getBoolean("isFirstLaunch", true)
-
-        if (isFirstLaunch) {
-            setContentView(R.layout.activity_splash)
-
-            val viewPager = findViewById<ViewPager2>(R.id.viewPager)
-            val adapter = SplashPagerAdapter(
-                images,
-                onNextClick = {
-                    val currentItem = viewPager.currentItem
-                    if (currentItem < images.size - 1) {
-                        viewPager.currentItem = currentItem + 1
-                    }
-                },
-                onBackClick = {
-                    val currentItem = viewPager.currentItem
-                    if (currentItem > 0) {
-                        viewPager.currentItem = currentItem - 1
-                    }
-                },
-                onFinishClick = {
-                    // Сохраняем, что это не первый запуск
-                    sharedPreferences.edit().putBoolean("isFirstLaunch", false).apply()
-
-                    // Переход в MainActivity
-                    val intent = Intent(this, MainActivity::class.java)
-                    startActivity(intent)
-                    finish()
-                }
-            )
-            viewPager.adapter = adapter
-        } else {
-            // Если это не первый запуск, сразу переходим в MainActivity
-            val intent = Intent(this, MainActivity::class.java)
-            startActivity(intent)
-            finish()
+        supportActionBar?.hide()
+        configureEntryWindow(this)
+        val prefs = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+        if (!prefs.getBoolean("isFirstLaunch", true)) {
+            openApp()
+            return
+        }
+        setContent {
+            OnboardingScreen(onComplete = {
+                prefs.edit().putBoolean("isFirstLaunch", false).putInt("introduction_version", 1).apply()
+                openApp()
+            }, onSos = { startActivity(Intent(this, SosActivity::class.java)) })
         }
     }
+
+    private fun openApp() {
+        if (isFinishing) return
+        startActivity(Intent(this, MainActivity::class.java))
+        finish()
+    }
 }
-
-

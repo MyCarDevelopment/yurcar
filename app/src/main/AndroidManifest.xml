@@ -47,9 +47,7 @@
         <activity
             android:name=".ui.login.YandexWebAuthActivity"
             android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
-            android:screenOrientation="fullSensor"
-            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@style/Theme.Entry"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
@@ -68,7 +66,7 @@
         </activity>
         <activity
             android:name=".SplashActivity"
-            android:theme="@style/Theme.AppCompat.NoActionBar"
+            android:theme="@style/Theme.Entry"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -77,7 +75,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".MainActivity" />
-        <activity android:name=".ui.map.MapFragment" />
+        <activity android:name=".ui.mycarfragment.UsefulTipsActivity" android:exported="false" />
         <activity android:name=".ui.checkfines.FinesFragment" />
         <activity android:name=".ui.mycarfragment.MyCarActivity" />
         <activity android:name=".ui.indicators.IndicatorsActivity" />
@@ -86,7 +84,9 @@
         <activity android:name=".ui.mycarfragment.LocationActivity" />
         <activity android:name=".ui.mycarfragment.CriticalityActivity" />
         <activity android:name=".ui.mycarfragment.AccidentActivity" />
-        <activity android:name=".AgreementActivity" />
+        <activity android:name=".AgreementActivity" android:exported="false" android:theme="@style/Theme.Entry" />
+        <activity android:name=".ui.entry.AuthWelcomeActivity" android:exported="false" android:theme="@style/Theme.Entry" />
+        <activity android:name=".ui.crash.SosActivity" android:exported="false" android:theme="@style/Theme.Entry" />
         <activity android:name=".LegalDocumentsActivity" />
         <activity android:name=".DocumentViewerActivity" />
     </application>

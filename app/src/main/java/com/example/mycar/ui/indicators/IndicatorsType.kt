@@ -1,60 +1,45 @@
 package com.example.mycar.ui.indicators
 
-import androidx.compose.foundation.layout.Column
-
-import androidx.compose.ui.unit.dp
-import com.example.mycar.R
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import com.example.mycar.R
 
+data class CategoryItem(val name: String, val iconRes: Int)
 
-@Composable
-fun CatalogScreenn(navController: NavController) {
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-
-
-
-
-        // Список категорий с иконками
-        val categories = listOf(
+private val indicatorCategories = listOf(
             CategoryItem(
                 "Неисправность тормозной системы (если индикатор включается во время движения). Рекомендация: долив тормозной жидкости при снижении ее уровня не решит проблему, ехать на машине нельзя. Помогут только вызов эвакуатора и доставка автомобиля на СТО.",
                 R.drawable.helpersf
             ),
             CategoryItem(
-                "Низкое давление масла в двигателе. Рекомендация: срочно проверить уровень масла и при необходимости долить, чтобы добраться до СТО. Если уровень в норме, возможно, неисправен масляный насос или забит масляный фильтр. Тогда только буксировка или вызов эвакуатора для доставки автомобиля на СТО.",
+                "Низкое давление масла в двигателе. Рекомендация: безопасно остановитесь и заглушите двигатель. Проверьте уровень по руководству. Даже нормальный уровень не подтверждает нормальное давление; не продолжайте поездку с горящим предупреждением. Организуйте диагностику и эвакуацию.",
                 R.drawable.helperss
             ),
-            CategoryItem(
-                "Перегрев двигателя. Рекомендация: немедленно остановиться, выключить двигатель и дождаться, когда он остынет. После этого проверить уровень охлаждающей жидкости и при необходимости долить ее. Если уровень в норме, возможен целый букет неисправностей в системе охлаждения. Тогда только буксировка или вызов эвакуатора для доставки автомобиля на СТО.",
-                R.drawable.helperst
-            ),
+            CategoryItem("Перегрев двигателя. Рекомендация: безопасно остановитесь и заглушите двигатель. Не открывайте горячую систему охлаждения. После остывания проверьте уровень по инструкции; при течи или повторном предупреждении организуйте помощь.", R.drawable.helperst),
             CategoryItem(
                 "Неисправность автоматической коробки передач. Рекомендация: Только вызов эвакуатора для доставки автомобиля на СТО.\n",
                 R.drawable.helpersff
@@ -68,55 +53,34 @@ fun CatalogScreenn(navController: NavController) {
                 R.drawable.helperssi
             ),
             CategoryItem(
-                "Отсутствует зарядка аккумулятора. Рекомендация: Подтянуть ремень генератора. Если это не помогло, своим ходом, используя имеющийся заряд аккумулятора, можно протянуть лишь несколько километров при условии отключения по максимуму энергопотребителей. СТО далеко? Если да, тогда только буксировка автомобиля или вызов эвакуатора.",
+                "Отсутствует зарядка аккумулятора. Рекомендация: безопасно остановитесь и обратитесь за помощью. Возможны неисправности системы зарядки или привода агрегатов. Не регулируйте ремни у работающего двигателя и не рассчитывайте на гарантированный запас хода от батареи.",
                 R.drawable.helpersseven
             ), // и грунтовки
             CategoryItem(
                 "Неисправность подушки безопасности. Рекомендация: немедленно отправляться на СТО.",
                 R.drawable.helperseight
             ),
-            CategoryItem(
-                "Непристегнутый ремень безопасности. Если все пассажиры пристегнуты, и на сиденьях нет тяжелых предметов, причина в электрике. Двигаться можно, но необходим ремонт.\n",
-                R.drawable.helpersnine
-            ),
-            CategoryItem(
-                "Открыты двери. Рекомендация: если двери закрыты, причина в электрике. Двигаться можно, но необходим ремонт.",
-                R.drawable.ind1
-            ),
-            CategoryItem(
-                "Открыт капот. Рекомендация: если капот закрыт, причина в электрике. Двигаться можно, но необходим ремонт.",
-                R.drawable.ind3
-            ),
-            CategoryItem(
-                "Открыт багажник. Рекомендация: если багажник или грузовой отсек закрыты, причина в электрике. Двигаться можно, но необходим ремонт.",
-                R.drawable.ind55
-            ),//error
+            CategoryItem("Напоминание о ремне безопасности. Рекомендация: перед поездкой убедитесь, что все пассажиры пристёгнуты. Если сигнал остаётся при застёгнутых ремнях, проверьте предметы на сиденьях и обратитесь для диагностики; не отключайте датчики и не используйте заглушки.", R.drawable.helpersnine),
+            CategoryItem("Открыта дверь. Рекомендация: остановитесь безопасно и убедитесь, что двери закрыты и зафиксированы. Если сообщение остаётся, не считайте его автоматически ошибкой датчика: проверьте замки в сервисе.", R.drawable.ind1),
+            CategoryItem("Открыт капот. Рекомендация: до движения убедитесь, что капот полностью закрыт и зафиксирован. Если предупреждение остаётся, нужна проверка замка и датчика; не продолжайте поездку с незафиксированным капотом.", R.drawable.ind3),
+            CategoryItem("Открыт багажник. Рекомендация: безопасно остановитесь, закрепите груз и закройте крышку. При сохраняющемся предупреждении проверьте замок и датчик в сервисе.", R.drawable.ind55),//error
             CategoryItem(
                 "Неисправность батареи автомобиля с гибридной или электрической силовой установкой. Рекомендация: остановиться и вызвать эвакуатор для доставки автомобиля на СТО.",
                 R.drawable.ind4
             ),
-            CategoryItem(
-                "Батарейка электронного ключа зажигания разряжена. Рекомендация: если нет возможности сразу заменить батарейку, для закрывания или открывания дверей и запуска или отключения двигателя воспользуйтесь интегрированным в брелок металлическим ключом.",
-                R.drawable.ind56
-            ),//error
+            CategoryItem("Разряжена батарейка ключа. Рекомендация: замените элемент по инструкции. Способ аварийного доступа и запуска зависит от модели; механический ключ не всегда позволяет запустить двигатель.", R.drawable.ind56),//error
             CategoryItem(
                 "Предупреждение о серьезной проблеме. Рекомендация: нажать соответствующую кнопку для ознакомления с содержанием предупреждения, которое отобразится на дисплее приборного щитка, и принять решение о возможности дальнейшего движения.\n" +
                         "\n", R.drawable.ind6
             ),
-            CategoryItem("Сбой в работе двигателя.", R.drawable.ind7),
-            CategoryItem(
-                "Засорен воздушный фильтр. Рекомендация: при заглушенном двигателе снять и прочистить (при необходимости заменить) фильтр",
-                R.drawable.ind8
-            ),
+            CategoryItem("Индикатор неисправности двигателя. Рекомендация: при мигании, сильной тряске или потере мощности остановитесь и обратитесь за помощью. При постоянном свечении прочитайте сообщение автомобиля и согласуйте диагностику; не стирайте ошибки до проверки.", R.drawable.ind7),
+            CategoryItem("Предупреждение о воздушном фильтре. Рекомендация: сверьте значение значка с руководством. На заглушенном двигателе проверьте подходящий фильтр в сервисе; одноразовый бумажный элемент не мойте и не эксплуатируйте двигатель без него.", R.drawable.ind8),
             CategoryItem("Не закрыт топливный бак.", R.drawable.ind9),
             CategoryItem(
                 "Наличие воды в топливной системе дизельного двигателя.\n",
                 R.drawable.ind10
             ),
-            CategoryItem(
-                "Низкий уровень топлива. Рекомендация: как можно быстрее заправить автомобиль. Если индикатор продолжает гореть, причина в электрике. Двигаться можно, но необходим ремонт.",
-                R.drawable.ind11
-            ),
+            CategoryItem("Низкий уровень топлива. Рекомендация: запланируйте ближайшую безопасную заправку, не полагаясь на точность остаточного запаса хода. Если после заправки сигнал остаётся, нужна диагностика показаний уровня.", R.drawable.ind11),
             CategoryItem("Перегрев или неисправность катализатора", R.drawable.ind12),
             CategoryItem("Неисправность сажевого фильтра", R.drawable.ind13),
             CategoryItem(
@@ -124,24 +88,15 @@ fun CatalogScreenn(navController: NavController) {
                 R.drawable.ind14
             ),
             CategoryItem("Износ тормозных колодок.", R.drawable.ind15),
-            CategoryItem("Сбой в работе ABS.", R.drawable.ind16),
+            CategoryItem("Неисправность ABS. Рекомендация: антиблокировочная функция может быть недоступна; при изменении торможения или одновременном красном сигнале тормозов прекратите поездку. Проверьте руководство и организуйте диагностику.", R.drawable.ind16),
             CategoryItem("Сбой в работе системы стабилизации.", R.drawable.ind17),
             CategoryItem(
                 "Сбой в работе электромеханического стояночного тормоза.\n",
                 R.drawable.ind18
             ),
-            CategoryItem(
-                "Падение давления в шинах. Рекомендация: с помощью проверенного манометра убедитесь в факте падения давления. Случается, измеряющие его датчики дают неверную информацию. В таком случае после перезапуска двигателя индикатор, как правило, гаснет.\n",
-                R.drawable.ind19
-            ),
-            CategoryItem(
-                "Электронный ключ зажигания не обнаружен в автомобиле. Рекомендация: при наличии ключа поднести его ближе к передней панели и перезапустить двигатель. После этого индикатор, как правило, гаснет.",
-                R.drawable.ind20
-            ),
-            CategoryItem(
-                "Низкий уровень омывающей жидкости. Рекомендация: долить жидкость. Если ее уровень в норме, причина в электрике. Необходим ремонт.",
-                R.drawable.ind21
-            ),
+            CategoryItem("Предупреждение давления в шинах. Рекомендация: остановитесь безопасно и измерьте давление на холодных колёсах по табличке автомобиля. Осмотрите шины на повреждения. Не списывайте сигнал на датчик и не сбрасывайте TPMS до проверки давления.", R.drawable.ind19),
+            CategoryItem("Электронный ключ не обнаружен. Рекомендация: проверьте наличие ключа и батарейку. Штатную точку распознавания и резервный способ запуска найдите в руководстве вашей модели.", R.drawable.ind20),
+            CategoryItem("Низкий уровень омывающей жидкости. Рекомендация: долейте подходящую по сезону жидкость. Если уровень достаточен, но сигнал остаётся, требуется проверка датчика и системы.", R.drawable.ind21),
             CategoryItem("Неисправность корректора фар.", R.drawable.ind22),
             CategoryItem("Перегорела лампочка в фаре.", R.drawable.ind23),
             CategoryItem("Система старт-стоп включена.", R.drawable.ind24),
@@ -204,113 +159,66 @@ fun CatalogScreenn(navController: NavController) {
             CategoryItem("Напоминание о необходимости проведения ТО.", R.drawable.ind54)
         )
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(categories.size) { index ->
-                CategoryCard(category = categories[index], onClick = {
-                    navController.navigate("category/${categories[index].name}")
-                })
+@Composable
+fun NavigationComponentt(onBack: () -> Unit = {}) {
+    var selected by rememberSaveable { mutableStateOf(-1) }
+    var query by rememberSaveable { mutableStateOf("") }
+    val accent = Color(0xFFFFA666)
+    val muted = Color(0xFFA2A8B0)
+    BackHandler(enabled = selected >= 0) { selected = -1 }
+    MaterialTheme(colors = darkColors(primary = accent, surface = Color(0xFF1B1E22), background = Color(0xFF101214))) {
+        Column(Modifier.fillMaxSize().background(MaterialTheme.colors.background)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { if (selected >= 0) selected = -1 else onBack() }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад", tint = accent)
+                }
+                Text(if (selected >= 0) "Значение индикатора" else "Приборная панель", color = Color.White, fontWeight = FontWeight.SemiBold)
             }
-        }
-
-
-    }
-}
-
-data class CategoryItem(val name: String, val iconRes: Int)
-
-@Composable
-fun CategoryCard(category: CategoryItem, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .size(90.dp)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(8.dp),
-        elevation = 4.dp
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Image(
-                painter = painterResource(id = category.iconRes),
-                contentDescription = category.name,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop // Кадрирование изображения, чтобы оно заполнило карточку
-            )
-            Text(
-                text = category.name,
-                fontSize = 0.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(8.dp) // Отступ для текста внутри карточки
-                    .background(Color(0x80000000)) // Полупрозрачный фон для читаемости текста
-            )
-        }
-    }
-}
-
-@Composable
-fun CategoryDetailScreen(navController: NavController, category: String) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(text = category, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        // Возврат на HomeFragment
-                        navController.popBackStack(route = "catalog", inclusive = false)
-                    }) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.baseline_arrow_back_24), // Замените на свою иконку
-                            contentDescription = "Назад"
-                        )
+            if (selected in indicatorCategories.indices) {
+                val category = indicatorCategories[selected]
+                LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    item {
+                        Image(painterResource(category.iconRes), null, contentScale = ContentScale.Fit,
+                            modifier = Modifier.size(110.dp).clip(RoundedCornerShape(20.dp)).background(Color.White).padding(14.dp))
+                    }
+                    item { Text(category.name.substringBefore("Рекомендация:").trim(), color = Color.White,
+                        fontSize = 22.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold) }
+                    if ("Рекомендация:" in category.name) item {
+                        Surface(color = MaterialTheme.colors.surface, shape = RoundedCornerShape(20.dp)) {
+                            Column(Modifier.padding(18.dp)) {
+                                Text("Что делать", color = accent, fontWeight = FontWeight.SemiBold)
+                                Text(category.name.substringAfter("Рекомендация:").trim(), color = Color.White,
+                                    fontSize = 15.sp, lineHeight = 24.sp, modifier = Modifier.padding(top = 10.dp))
+                            }
+                        }
+                    }
+                    item { Text("Сверьте символ и сообщение с руководством вашей модели. Одинаковые значки могут иметь разные значения; цвет и режим мигания тоже важны.",
+                        color = muted, fontSize = 13.sp, lineHeight = 21.sp) }
+                }
+            } else {
+                Text("Что показывает автомобиль?", color = Color.White, fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
+                Text("Выберите похожий значок. Уточните его значение по руководству вашей модели.", color = muted,
+                    fontSize = 13.sp, lineHeight = 20.sp, modifier = Modifier.padding(horizontal = 20.dp))
+                OutlinedTextField(query, { query = it }, singleLine = true, placeholder = { Text("Масло, тормоза, свет…") },
+                    leadingIcon = { Icon(Icons.Default.Search, null) }, shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(20.dp))
+                val filtered = indicatorCategories.withIndex().filter { it.value.name.contains(query.trim(), ignoreCase = true) }
+                if (filtered.isEmpty()) Text("Ничего не найдено. Попробуйте другое название.", color = muted, modifier = Modifier.padding(20.dp))
+                LazyVerticalGrid(columns = GridCells.Adaptive(100.dp), contentPadding = PaddingValues(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    itemsIndexed(filtered, key = { _, item -> item.index }) { _, item ->
+                        Column(Modifier.clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colors.surface)
+                            .clickable { selected = item.index }.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Image(painterResource(item.value.iconRes), null, contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxWidth().height(64.dp).clip(RoundedCornerShape(12.dp)).background(Color.White).padding(8.dp))
+                            Text(item.value.name.substringBefore('.').substringBefore("Рекомендация:"), color = Color.White,
+                                fontSize = 11.sp, lineHeight = 15.sp, maxLines = 3, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 53.dp).padding(top = 8.dp))
+                        }
                     }
                 }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = " $category",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
-            // Дополнительный контент можно добавить здесь
-        }
-    }
-}
-
-
-
-// Навигация между экранами
-@Composable
-fun NavigationComponentt() {
-    val navController = rememberNavController()
-
-    NavHost(navController = navController, startDestination = "catalog") {
-        composable("catalog") {
-            CatalogScreenn(navController = navController)
-        }
-        composable("category/{category}") { backStackEntry ->
-            val category = backStackEntry.arguments?.getString("category")
-            CategoryDetailScreen(
-                navController = navController,
-                category = category ?: "Неизвестная категория"
-            )
+            }
         }
     }
 }

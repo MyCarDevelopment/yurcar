@@ -1,7 +1,6 @@
 package com.example.mycar.ui.mycarfragment
 
 
-import MyCarScreen
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -39,15 +38,14 @@ class MyCarActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        supportActionBar?.apply {
-            title = "Справочник водителя"
-            setDisplayHomeAsUpEnabled(true)
-        }
+        supportActionBar?.hide()
 
         setContentView(
             ComposeView(this).apply {
                 setContent {
                     MyCarScreen(
+                        onBack = { finish() },
+                        onTipsClick = { startActivity(Intent(this@MyCarActivity, UsefulTipsActivity::class.java)) },
                         onSymptomsClick = {
                             // ✅ Фрагмент по симптомам
                             startActivity(Intent(this@MyCarActivity, SymptomsActivity::class.java))
@@ -72,6 +70,8 @@ class MyCarActivity : BaseActivity() {
                             // ✅ ДТП / Эвакуатор
                             startActivity(Intent(this@MyCarActivity, AccidentActivity::class.java))
                         }
+                        //причина следств связей
+                        //из чего состоит авто
                     )
                 }
             }
@@ -85,9 +85,5 @@ class MyCarActivity : BaseActivity() {
         return true
     }
 
-    override fun onBackPressed() {
-        super.onBackPressed()
-        finish()
-    }
 }
 

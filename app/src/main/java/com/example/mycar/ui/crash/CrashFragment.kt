@@ -1,490 +1,189 @@
 package com.example.mycar.ui.crash
 
-import androidx.fragment.app.Fragment
-import com.example.mycar.R
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.setContent
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CarCrash
-import androidx.compose.material.icons.filled.LocalShipping
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import com.example.mycar.BaseActivity
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
+import com.example.mycar.R
+import com.example.mycar.ui.entry.*
+import com.example.mycar.ui.instructions.InstructionsActivity
+
 class CrashFragment : Fragment() {
-
-override fun onCreateView(
-    inflater: android.view.LayoutInflater,
-    container: android.view.ViewGroup?,
-    savedInstanceState: Bundle?
-): View {
-    return (requireActivity() as BaseActivity).createComposeView {
-        InfoScreen()
-    }
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
+        ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                SosScreen(onDial = { dialNumber(context, it) }, onSource = { openSource(context, it) },
+                    onOpenMap = { findNavController().navigate(R.id.navigation_dashboard) },
+                    onRoadHelp = { startActivity(Intent(requireContext(), InstructionsActivity::class.java)) })
+            }
+        }
 }
-}
 
-@Composable
-fun InfoScreen() {
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF5F7FA)),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-
-        item {
-            Text(
-                text = "🚗 Помощь водителю",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        item {
-            Text(
-                text = "ДТП, эвакуация, европротокол и полезная информация для водителей Санкт-Петербурга.",
-                color = Color.Gray
-            )
-        }
-
-        item {
-            HelpCard(
-                title = "🚘 Эвакуация автомобиля",
-                color = Color(0xFF1565C0)
-            ) {
-
-                SectionTitle("Что делать если машину эвакуировали?")
-
-                Bullet("Уточните местонахождение автомобиля")
-                Bullet("Узнайте адрес штрафстоянки")
-                Bullet("Подготовьте документы")
-                Bullet("Получите разрешение на выдачу автомобиля")
-
-                Spacer(Modifier.height(12.dp))
-
-                SectionTitle("Необходимые документы")
-
-                Bullet("Паспорт")
-                Bullet("Водительское удостоверение")
-                Bullet("СТС")
-                Bullet("Полис ОСАГО")
-
-                Spacer(Modifier.height(12.dp))
-
-                SectionTitle("Комитет по транспорту")
-
-                PhoneItem(
-                    "Комитет по транспорту",
-                    "Исполкомская ул., 16",
-                    "+7 (812) 111-11-11"
-                )
-
-                Spacer(Modifier.height(12.dp))
-
-                SectionTitle("Штрафстоянки")
-
-                ParkingCard(
-                    "Штрафстоянка №1",
-                    "ул. Северная, 12",
-                    "+7 (812) 222-22-22"
-                )
-
-                ParkingCard(
-                    "Штрафстоянка №2",
-                    "пр. Московский, 48",
-                    "+7 (812) 333-33-33"
-                )
-
-                ParkingCard(
-                    "Штрафстоянка №3",
-                    "ул. Автомобильная, 5",
-                    "+7 (812) 444-44-44"
-                )
+class SosActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        supportActionBar?.hide()
+        configureEntryWindow(this)
+        setContent {
+            Box(Modifier.fillMaxSize().background(EntryBg).systemBarsPadding()) {
+                SosScreen(onDial = { dialNumber(this@SosActivity, it) }, onSource = { openSource(this@SosActivity, it) },
+                    onClose = { finish() }, onRoadHelp = { startActivity(Intent(this@SosActivity, InstructionsActivity::class.java)) })
             }
-        }
-
-        item {
-
-            HelpCard(
-                title = "🚨 ДТП",
-                color = Color(0xFFD32F2F)
-            ) {
-
-                SectionTitle("Первые действия")
-
-                Bullet("Остановить автомобиль")
-                Bullet("Включить аварийную сигнализацию")
-                Bullet("Выставить знак аварийной остановки")
-                Bullet("Проверить наличие пострадавших")
-                Bullet("Зафиксировать повреждения")
-
-                Spacer(Modifier.height(12.dp))
-
-                SectionTitle("Особые случаи ДТП")
-
-                ExpandableItem(
-                    title = "🚋 ДТП на трамвайных путях",
-                    description = """
-        • Не покидать место до фиксации
-        • Сделать фото положения авто и рельсов
-        • По возможности освободить путь
-        • Вызвать ГИБДД при спорной ситуации
-    """.trimIndent()
-                )
-
-                ExpandableItem(
-                    title = "🅿 ДТП на парковке",
-                    description = """
-        • Зафиксировать оба автомобиля
-        • Проверить камеры (если есть)
-        • Оставить записку/контакт при отсутствии владельца
-        • Можно оформить европротокол
-    """.trimIndent()
-                )
-
-                ExpandableItem(
-                    title = "🏠 ДТП во дворе",
-                    description = """
-        • Считается полноценным ДТП
-        • Вызов ГИБДД при споре
-        • Фиксация машин со всех сторон
-        • Запись свидетелей
-    """.trimIndent()
-                )
-
-                ExpandableItem(
-                    title = "🚗 Каршеринг ДТП",
-                    description = """
-        • Сразу уведомить сервис каршеринга
-        • Не покидать место ДТП
-        • Фотографии со всех ракурсов
-        • Дождаться инструкций оператора
-    """.trimIndent()
-                )
-
-                ExpandableItem(
-                    title = "🚴 ДТП с велосипедистом",
-                    description = """
-        • Проверить состояние пострадавшего
-        • Вызвать 112 при травмах
-        • Зафиксировать место происшествия
-        • Оформление через ГИБДД
-    """.trimIndent()
-                )
-
-                ExpandableItem(
-                    title = "🛴 ДТП с самокатом",
-                    description = """
-        • Часто приравнивается к ДТП с пешеходом
-        • Проверить травмы
-        • Вызвать экстренные службы при необходимости
-        • Сделать фото дорожной обстановки
-    """.trimIndent()
-                )
-
-                Spacer(Modifier.height(12.dp))
-
-                SectionTitle("Если есть пострадавшие")
-
-                Text(
-                    text = "Немедленно звоните 112. Не перемещайте пострадавших без необходимости.",
-                    color = Color.Red,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-
-        item {
-
-            HelpCard(
-                title = "📝 Европротокол",
-                color = Color(0xFF2E7D32)
-            ) {
-
-                SectionTitle("Когда можно оформить")
-
-                Bullet("Нет пострадавших")
-                Bullet("Участвуют два автомобиля")
-                Bullet("Есть действующий ОСАГО")
-                Bullet("Нет серьёзных разногласий")
-
-                Spacer(Modifier.height(12.dp))
-
-                SectionTitle("Как заполнить")
-
-                Bullet("Указать место и дату ДТП")
-                Bullet("Заполнить данные участников")
-                Bullet("Указать данные автомобилей")
-                Bullet("Нарисовать схему ДТП")
-                Bullet("Поставить подписи")
-
-                Spacer(Modifier.height(12.dp))
-
-                SectionTitle("После оформления")
-
-                Bullet("Сделать фотографии")
-                Bullet("Сохранить копию документов")
-                Bullet("Передать документы страховщику")
-                Bullet("Контролировать выплату")
-            }
-        }
-
-        item {
-
-            HelpCard(
-                title = "☎ Полезные телефоны",
-                color = Color(0xFFFF9800)
-            ) {
-
-                PhoneItem(
-                    "Экстренные службы",
-                    "112",
-                    "Круглосуточно"
-                )
-
-                PhoneItem(
-                    "Полиция",
-                    "102",
-                    "Круглосуточно"
-                )
-
-                PhoneItem(
-                    "Скорая помощь",
-                    "103",
-                    "Круглосуточно"
-                )
-
-                PhoneItem(
-                    "Эвакуация автомобилей",
-                    "+7 (812) 555-55-55",
-                    "Круглосуточно"
-                )
-            }
-        }
-
-        item {
-
-            HelpCard(
-                title = "⚠ Частые ошибки",
-                color = Color(0xFF7B1FA2)
-            ) {
-
-                Bullet("Уезжают с места ДТП")
-                Bullet("Не фотографируют повреждения")
-                Bullet("Не фиксируют дорожную обстановку")
-                Bullet("Не записывают свидетелей")
-                Bullet("Подписывают документы не читая")
-                Bullet("Не уведомляют страховую")
-                Bullet("Неправильно рисуют схему ДТП")
-            }
-        }
-
-        item {
-            Spacer(Modifier.height(40.dp))
         }
     }
 }
 
+private fun dialNumber(context: Context, number: String) {
+    try { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null))) }
+    catch (_: ActivityNotFoundException) { Toast.makeText(context, "Откройте телефон и наберите $number", Toast.LENGTH_LONG).show() }
+}
+private fun openSource(context: Context, url: String) {
+    try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+    catch (_: ActivityNotFoundException) { Toast.makeText(context, "Не найден браузер", Toast.LENGTH_SHORT).show() }
+}
+
 @Composable
-private fun InfoCard(
-    icon: @Composable () -> Unit,
-    title: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                icon()
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+fun SosScreen(onDial: (String) -> Unit, onSource: (String) -> Unit,
+              onOpenMap: (() -> Unit)? = null, onRoadHelp: () -> Unit = {}, onClose: (() -> Unit)? = null,
+              initialTopic: String? = null) {
+    var selectedId by rememberSaveable { mutableStateOf(initialTopic) }
+    val selected = sosTopics.firstOrNull { it.id == selectedId }
+    val urgent = Color(0xFFFFB3A5)
+    BackHandler(enabled = selected != null) { selectedId = null }
+    EntryTheme {
+        Column(Modifier.fillMaxSize().background(EntryBg)) {
+            if (selected != null || onClose != null) Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { if (selected != null) selectedId = null else onClose?.invoke() }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад", tint = EntryAccent)
+                }
+                Text(if (selected != null) "SOS · ${selected.title}" else "Срочная помощь", color = Color.White,
+                    fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            content()
-        }
-    }
-}
-
-
-@Composable
-fun HelpCard(
-    title: String,
-    color: Color,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-
-            Text(
-                text = title,
-                color = color,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            content()
-        }
-    }
-}
-@Composable
-fun SectionTitle(text: String) {
-
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold
-    )
-
-    Spacer(Modifier.height(6.dp))
-}
-@Composable
-fun Bullet(text: String) {
-
-    Text(
-        text = "• $text",
-        modifier = Modifier.padding(vertical = 2.dp)
-    )
-}
-@Composable
-fun PhoneItem(
-    title: String,
-    phone: String,
-    info: String
-) {
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-    ) {
-
-        Column(
-            modifier = Modifier.padding(12.dp)
-        ) {
-
-            Text(
-                title,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text(phone)
-
-            Text(
-                info,
-                color = Color.Gray
-            )
-        }
-    }
-}
-@Composable
-fun ParkingCard(
-    name: String,
-    address: String,
-    phone: String
-) {
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-    ) {
-
-        Column(
-            modifier = Modifier.padding(12.dp)
-        ) {
-
-            Text(
-                name,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text(address)
-
-            Text(
-                phone,
-                color = Color(0xFF1565C0)
-            )
-        }
-    }
-}
-@Composable
-fun ExpandableItem(
-    title: String,
-    description: String
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        onClick = { expanded = !expanded }
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp)
-        ) {
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = title,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-
-                Text(
-                    text = if (expanded) "▲" else "▼",
-                    color = Color.Gray
-                )
-            }
-
-            if (expanded) {
-                Spacer(Modifier.height(8.dp))
-
-                Text(
-                    text = description,
-                    color = Color.DarkGray
-                )
+            if (selected == null) LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                item {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("SOS", color = urgent, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                        Text(" / Помощь в дороге", color = Color.White, fontSize = 15.sp, modifier = Modifier.padding(start = 10.dp))
+                    }
+                    Text("Сначала люди. Затем автомобиль.", color = EntryMuted, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+                }
+                item {
+                    Surface(color = Color(0xFF302022), shape = RoundedCornerShape(24.dp)) {
+                        Column(Modifier.padding(20.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.HealthAndSafety, null, tint = urgent, modifier = Modifier.size(30.dp))
+                                Text("Есть угроза жизни?", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 12.dp))
+                            }
+                            Text("Пострадавшие, пожар, опасность на дороге — обратитесь в экстренные службы.", color = Color(0xFFD3BDBF),
+                                fontSize = 13.sp, lineHeight = 21.sp, modifier = Modifier.padding(top = 12.dp))
+                            Button(onClick = { onDial("112") }, colors = ButtonDefaults.buttonColors(backgroundColor = urgent, contentColor = EntryBg),
+                                shape = RoundedCornerShape(15.dp), modifier = Modifier.fillMaxWidth().padding(top = 16.dp).heightIn(min = 54.dp)) {
+                                Icon(Icons.Default.Phone, null, modifier = Modifier.size(21.dp)); Spacer(Modifier.width(10.dp))
+                                Text("112 · Экстренная помощь", fontWeight = FontWeight.Bold)
+                            }
+                            Text("Кнопка откроет набор номера", color = Color(0xFFD3BDBF), fontSize = 10.sp, modifier = Modifier.padding(top = 9.dp))
+                        }
+                    }
+                }
+                item { Text("ЧТО ПРОИЗОШЛО?", color = EntryMuted, fontSize = 10.sp, letterSpacing = 1.4.sp) }
+                items(sosTopics, key = { it.id }) { topic ->
+                    val icon = when (topic.id) { "accident" -> Icons.Default.CarCrash; "breakdown" -> Icons.Default.CarRepair; "evacuated" -> Icons.Default.LocalShipping; else -> Icons.Default.FactCheck }
+                    Surface(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable { selectedId = topic.id }, color = EntrySurface,
+                        shape = RoundedCornerShape(20.dp)) {
+                        Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(42.dp).background(EntryAccent.copy(alpha = .1f), RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) {
+                                Icon(icon, null, tint = EntryAccent, modifier = Modifier.size(24.dp))
+                            }
+                            Column(Modifier.weight(1f).padding(horizontal = 13.dp)) {
+                                Text(topic.title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                                Text(topic.summary, color = EntryMuted, fontSize = 12.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 5.dp))
+                            }
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = EntryMuted, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                }
+                item {
+                    Surface(color = EntrySurface, shape = RoundedCornerShape(20.dp)) {
+                        Column(Modifier.padding(18.dp)) {
+                            Text("Эвакуация в Петербурге", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Городская служба 004 подскажет, куда мог быть перемещён автомобиль.", color = EntryMuted,
+                                fontSize = 12.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 8.dp))
+                            OutlinedButton(onClick = { onDial("+78125764004") }, shape = RoundedCornerShape(13.dp),
+                                modifier = Modifier.fillMaxWidth().padding(top = 12.dp).heightIn(min = 48.dp)) {
+                                Icon(Icons.Default.Phone, null, modifier = Modifier.size(17.dp)); Text("  +7 (812) 576-40-04", fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
+                item {
+                    TextButton(onClick = onRoadHelp) { Text("Памятки по поломкам и помощи в пути") }
+                    onOpenMap?.let { callback -> TextButton(onClick = callback) { Text("Открыть карту сервисов") } }
+                    Text("Памятки помогают сориентироваться. В экстренной ситуации следуйте указаниям диспетчера и служб на месте.",
+                        color = EntryMuted, fontSize = 11.sp, lineHeight = 18.sp, modifier = Modifier.padding(vertical = 10.dp))
+                }
+            } else key(selected.id) {
+                LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    item {
+                        Text(selected.title, color = Color.White, fontSize = 28.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold)
+                        Text(selected.summary, color = EntryMuted, fontSize = 14.sp, lineHeight = 22.sp, modifier = Modifier.padding(top = 10.dp))
+                    }
+                    item {
+                        Surface(color = EntrySurface, shape = RoundedCornerShape(22.dp)) {
+                            Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                                Text("Действуйте по порядку", color = EntryAccent, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                                selected.steps.forEachIndexed { index, step -> Row {
+                                    Text("0${index + 1}", color = EntryAccent, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.width(30.dp))
+                                    Text(step, color = Color.White, fontSize = 14.sp, lineHeight = 23.sp)
+                                } }
+                            }
+                        }
+                    }
+                    item {
+                        Text(selected.checklistTitle, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
+                        selected.checklist.forEach { point -> Text("•  $point", color = EntryMuted, fontSize = 14.sp, lineHeight = 23.sp, modifier = Modifier.padding(top = 12.dp)) }
+                    }
+                    item { Surface(color = Color(0xFF302022), shape = RoundedCornerShape(18.dp)) {
+                        Text(selected.note, color = urgent, fontSize = 13.sp, lineHeight = 21.sp, modifier = Modifier.padding(18.dp))
+                    } }
+                    item {
+                        if (selected.id == "accident") Button(onClick = { onDial("112") }, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp), shape = RoundedCornerShape(14.dp)) { Text("Открыть набор 112") }
+                        if (selected.id == "evacuated") Button(onClick = { onDial("+78125764004") }, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp), shape = RoundedCornerShape(14.dp)) { Text("Позвонить в службу 004") }
+                        TextButton(onClick = { onSource(selected.sourceUrl) }) { Text(selected.sourceTitle, fontSize = 12.sp) }
+                    }
+                }
             }
         }
     }

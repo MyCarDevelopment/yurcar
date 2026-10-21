@@ -11,22 +11,21 @@
         android:label="Главная"
         tools:layout="@layout/fragment_home" />
 
-    <fragment
+    <activity
         android:id="@+id/navigation_indicators"
-        android:name="com.example.mycar.ui.indicators.IndicatorsFragment"
-        android:label="Indicators"
-        tools:layout="@layout/fragment_sixth" />
+        android:name="com.example.mycar.ui.indicators.IndicatorsActivity"
+        android:label="Приборная панель" />
 
     <fragment
         android:id="@+id/navigation_dashboard"
         android:name="com.example.mycar.ui.map.MapFragment"
-        android:label="Избранное"
+        android:label="Карта"
         tools:layout="@layout/fragment_dashboard" />
 
     <fragment
         android:id="@+id/navigation_crash"
         android:name="com.example.mycar.ui.crash.CrashFragment"
-        android:label="ДТП" />
+        android:label="SOS" />
 
     <fragment
         android:id="@+id/navigation_notifications"

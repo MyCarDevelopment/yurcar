@@ -33,15 +33,12 @@ import com.example.mycar.R
 class IndicatorsActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        supportActionBar?.apply {
-            title = "Приборная панель"
-            setDisplayHomeAsUpEnabled(true)  // ✅ Стрелка включена
-        }
+        supportActionBar?.hide()
 
         setContentView(
             ComposeView(this).apply {
                 setContent {
-                    NavigationComponentt()
+                    NavigationComponentt(onBack = { finish() })
                 }
             }
         )
@@ -53,9 +50,4 @@ class IndicatorsActivity : BaseActivity() {
         return true
     }
 
-    // ✅ Дополнительно - обработка системной кнопки Назад
-    override fun onBackPressed() {
-        super.onBackPressed()
-        finish()  // Закрываем Activity
-    }
 }

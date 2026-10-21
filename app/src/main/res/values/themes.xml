@@ -10,4 +10,11 @@
 
     </style>
 
+    <style name="Theme.Entry" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">#101214</item>
+        <item name="android:statusBarColor">#101214</item>
+        <item name="android:navigationBarColor">#101214</item>
+        <item name="colorPrimary">#FFA666</item>
+        <item name="colorOnPrimary">#101214</item>
+    </style>
 </resources>
