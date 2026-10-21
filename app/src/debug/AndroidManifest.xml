@@ -1,0 +1,9 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity android:name=".MapDesignPreviewActivity" android:exported="true" android:label="Карта · дизайн" />
+        <activity
+            android:name=".HomeDesignPreviewActivity"
+            android:exported="true"
+            android:label="Главная · дизайн" />
+    </application>
+</manifest>
